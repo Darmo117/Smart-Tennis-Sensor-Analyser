@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.IntBinaryOperator;
+import java.util.function.Predicate;
 
 import net.darmo_creations.io.FileReader;
 import net.darmo_creations.model.Serve;
@@ -14,24 +15,33 @@ public class Main {
   public static void main(String[] args) {
     List<Swing> data = Parser.detectServes(FileReader.readFile(args[0]), LocalDate.of(2016, 11, 11));
 
-    int nbServes = data.stream().filter(swing -> swing.isServe()).mapToInt(s -> 1).sum();
+    int nbServes = data.stream().filter(swing -> swing instanceof Serve).mapToInt(s -> 1).sum();
+    int nbFirstServes = getNbServes(data, swing -> swing instanceof Serve && ((Serve) swing).getNumber() == 1);
+    int nbSecondServes = getNbServes(data, swing -> swing instanceof Serve && ((Serve) swing).getNumber() == 2);
+    int nbOtherServes = getNbServes(data, swing -> swing instanceof Serve && ((Serve) swing).getNumber() > 2);
 
-    int nbFirstServes = getNbServes(data, 1);
+    int nbValidFirstServes = getNbValidServes(data, 1);
     int maxFirst = reduceSpeed(data, 1, Integer::max);
     int minFirst = reduceSpeed(data, 1, Integer::min);
-    int avgFirst = reduceSpeed(data, 1, Integer::sum) / nbFirstServes;
+    int avgFirst = reduceSpeed(data, 1, Integer::sum) / nbValidFirstServes;
 
-    int nbSecondServes = getNbServes(data, 2);
+    int nbValidSecondServes = getNbValidServes(data, 2);
     int maxSecond = reduceSpeed(data, 2, Integer::max);
     int minSecond = reduceSpeed(data, 2, Integer::min);
-    int avgSecond = reduceSpeed(data, 2, Integer::sum) / nbSecondServes;
+    int avgSecond = reduceSpeed(data, 2, Integer::sum) / nbValidSecondServes;
 
-    System.out.format("Proportion de 1ers services : %.2f%%\n", (100 * (double) nbFirstServes / nbServes));
+    System.out.println(nbFirstServes);
+    System.out.println(nbSecondServes);
+    System.out.println(nbOtherServes);
+
+    System.out.println("Nombre de services : " + nbServes);
+    System.out.println();
+    System.out.format("Proportion de 1ers services : %.2f%%\n", (100 * (double) nbValidFirstServes / nbFirstServes));
     System.out.format("Vitesse max : %d km/h\n", maxFirst);
     System.out.format("Vitesse moy : %d km/h\n", avgFirst);
     System.out.format("Vitesse min : %d km/h\n", minFirst);
     System.out.println();
-    System.out.format("Proportion de 2èmes services : %.2f%%\n", (100 * (double) nbSecondServes / nbServes));
+    System.out.format("Proportion de 2èmes services : %.2f%%\n", (100 * (double) nbValidSecondServes / (nbFirstServes + nbSecondServes)));
     System.out.format("Vitesse max : %d km/h\n", maxSecond);
     System.out.format("Vitesse moy : %d km/h\n", avgSecond);
     System.out.format("Vitesse min : %d km/h\n", minSecond);
@@ -43,22 +53,19 @@ public class Main {
     int avg = 0;
     Swing last = null;
 
-    int i = 0;
     LocalDateTime first = null;
     for (Swing swing : data) {
-      if (last != null && Parser.isIntervalLessThan(last.getDate(), swing.getDate(), 30)) {
-        int duration = (int) Duration.between(first, swing.getDate()).getSeconds();
+      if (last != null && !Parser.isIntervalLessThan(last.getDate(), swing.getDate(), Parser.GAP)) {
+        int duration = (int) Duration.between(first, last.getDate()).getSeconds();
 
         min = Math.min(min, duration);
         max = Math.max(max, duration);
         avg += duration;
         nb++;
-        i = 0;
+        first = swing.getDate();
       }
-      else {
-        if (i == 0)
-          first = swing.getDate();
-        i++;
+      else if (last == null) {
+        first = swing.getDate();
       }
       last = swing;
     }
@@ -73,19 +80,34 @@ public class Main {
     data.forEach(System.out::println);
   }
 
-  /**
-   * Calcule le nombre de n-ièmes services.
-   * 
-   * @param data les coups
-   * @param serveNb le numéro des services
-   * @return le nombre de n-ièmes services
-   */
-  private static int getNbServes(List<Swing> data, int serveNb) {
-    return data.stream().filter(swing -> swing.isServe() && ((Serve) swing).getNumber() == serveNb).mapToInt(s -> 1).sum();
+  private static int getNbServes(List<Swing> data, Predicate<Swing> fun) {
+    return data.stream().filter(fun).mapToInt(s -> 1).sum();
   }
 
   /**
-   * Opère une réduction sur la vitesse.
+   * Calcule le nombre de n-ièmes services valides.
+   * 
+   * @param data les coups
+   * @param serveNb le numéro des services
+   * @return le nombre de n-ièmes services valides
+   */
+  private static int getNbValidServes(List<Swing> data, int serveNb) {
+    int nb = 0;
+
+    for (int i = 0; i < data.size(); i++) {
+      Swing current = data.get(i);
+      Swing next = i < data.size() - 1 ? data.get(i + 1) : null;
+
+      if (current instanceof Serve && ((Serve) current).getNumber() == serveNb && //
+          (!(next instanceof Serve) || ((Serve) next).getNumber() != serveNb + 1))
+        nb++;
+    }
+
+    return nb;
+  }
+
+  /**
+   * Opère une réduction sur la vitesse des n-ièmes services valides.
    * 
    * @param data les coups
    * @param serveNb le numéro des services
@@ -93,6 +115,24 @@ public class Main {
    * @return la valeur après réduction des vitesses
    */
   private static int reduceSpeed(List<Swing> data, int serveNb, IntBinaryOperator fun) {
-    return data.stream().filter(swing -> swing.isServe() && ((Serve) swing).getNumber() == serveNb).mapToInt(s -> s.getSpeed()).reduce(fun).getAsInt();
+    int speed = 0;
+    boolean foundAny = false;
+
+    for (int i = 0; i < data.size(); i++) {
+      Swing current = data.get(i);
+      Swing next = i < data.size() - 1 ? data.get(i + 1) : null;
+
+      if (current instanceof Serve && ((Serve) current).getNumber() == serveNb && //
+          (!(next instanceof Serve) || ((Serve) next).getNumber() != serveNb + 1)) {
+        if (!foundAny) {
+          speed = current.getSpeed();
+          foundAny = true;
+        }
+        else
+          speed = fun.applyAsInt(speed, current.getSpeed());
+      }
+    }
+
+    return speed;
   }
 }

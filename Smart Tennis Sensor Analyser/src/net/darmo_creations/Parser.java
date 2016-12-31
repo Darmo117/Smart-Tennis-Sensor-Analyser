@@ -11,6 +11,8 @@ import net.darmo_creations.model.Swing;
 import net.darmo_creations.model.SwingType;
 
 public class Parser {
+  public static final int GAP = 15;
+
   /**
    * 
    * @param sensorData
@@ -25,15 +27,15 @@ public class Parser {
       Swing next = i < sensorData.size() - 1 ? sensorData.get(i + 1) : null;
 
       if (last != null && current.getDate().toLocalDate().equals(date)) {
-        if (next != null && (!last.isServe() || last.isServe() && !isIntervalLessThan(last.getDate(), current.getDate(), 30)) && current.isServe() && next.isServe() && isIntervalLessThan(current.getDate(), next.getDate(), 30)) {
+        if (next != null && (!last.isServe() || last.isServe() && !isIntervalLessThan(last.getDate(), current.getDate(), GAP)) && current.isServe() && next.isServe() && isIntervalLessThan(current.getDate(), next.getDate(), GAP)) {
           data.add(new Serve(current.getDate(), current.getSpeed(), 1));
           serveNb = 2;
         }
-        else if (isIntervalLessThan(last.getDate(), current.getDate(), 30) && last.getType() == SwingType.SERVE && current.getType() == SwingType.SERVE) {
+        else if (isIntervalLessThan(last.getDate(), current.getDate(), GAP) && last.getType() == SwingType.SERVE && current.getType() == SwingType.SERVE) {
           data.add(new Serve(current.getDate(), current.getSpeed(), serveNb));
           serveNb++;
         }
-        else if (!isIntervalLessThan(last.getDate(), current.getDate(), 30) && (current.getType() == SwingType.FOREHAND_VOLLEY || current.getType() == SwingType.BACKHAND_VOLLEY)) {
+        else if (!isIntervalLessThan(last.getDate(), current.getDate(), GAP) && (current.getType() == SwingType.FOREHAND_VOLLEY || current.getType() == SwingType.BACKHAND_VOLLEY)) {
           data.add(new Swing(current.getDate(), current.getType() == SwingType.FOREHAND_VOLLEY ? SwingType.FOREHAND_SLICE : SwingType.BACKHAND_SLICE, current.getSpeed()));
           serveNb = 1;
         }
