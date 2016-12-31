@@ -7,18 +7,18 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.darmo_creations.model.SensorData;
+import net.darmo_creations.model.Swing;
 import net.darmo_creations.model.SwingType;
 
 public class FileReader {
-  public static List<SensorData> readFile(String path) {
+  public static List<Swing> readFile(String path) {
     try {
-      List<SensorData> data = new ArrayList<>();
+      List<Swing> data = new ArrayList<>();
 
       Files.lines(Paths.get(path)).forEach(line -> {
         String[] columns = line.split(",");
         if (!"timestamp".equals(trim(columns[0])))
-          data.add(new SensorData(getDate(trim(columns[0])), SwingType.valueOf(trim(columns[3])), Integer.parseInt(trim(columns[5]))));
+          data.add(new Swing(getDate(trim(columns[0])), SwingType.valueOf(trim(columns[3])), Integer.parseInt(trim(columns[5]))));
       });
 
       return data;

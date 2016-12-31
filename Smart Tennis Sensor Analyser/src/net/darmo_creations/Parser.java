@@ -3,9 +3,11 @@ package net.darmo_creations;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-import net.darmo_creations.model.SensorData;
+import net.darmo_creations.model.Serve;
+import net.darmo_creations.model.Swing;
 import net.darmo_creations.model.SwingType;
 
 public class Parser {
@@ -13,31 +15,37 @@ public class Parser {
    * 
    * @param sensorData
    */
-  public static void parse(List<SensorData> sensorData, LocalDate date) {
-    SensorData last = null;
-    int j = 1;
+  public static List<Swing> detectServes(List<Swing> sensorData, LocalDate date) {
+    List<Swing> data = new ArrayList<>();
+    Swing last = null;
+    int serveNb = 1;
 
     for (int i = 0; i < sensorData.size(); i++) {
-      SensorData current = sensorData.get(i);
-      SensorData next = i < sensorData.size() - 1 ? sensorData.get(i + 1) : null;
+      Swing current = sensorData.get(i);
+      Swing next = i < sensorData.size() - 1 ? sensorData.get(i + 1) : null;
 
       if (last != null && current.getDate().toLocalDate().equals(date)) {
-        System.out.print(current.getDate().toLocalTime() + " ");
-        if (next != null && (!last.isServe() || last.isServe() && !isIntervalLessThan(last.getDate(), current.getDate(), 20)) && current.isServe() && next.isServe() && isIntervalLessThan(current.getDate(), next.getDate(), 20)) {
-          System.out.println("1er service");
-          j = 2;
+        if (next != null && (!last.isServe() || last.isServe() && !isIntervalLessThan(last.getDate(), current.getDate(), 30)) && current.isServe() && next.isServe() && isIntervalLessThan(current.getDate(), next.getDate(), 30)) {
+          data.add(new Serve(current.getDate(), current.getSpeed(), 1));
+          serveNb = 2;
         }
-        else if (isIntervalLessThan(last.getDate(), current.getDate(), 20) && last.getSwingType() == SwingType.SERVE && current.getSwingType() == SwingType.SERVE) {
-          System.out.println(j + "ème service");
-          j++;
+        else if (isIntervalLessThan(last.getDate(), current.getDate(), 30) && last.getType() == SwingType.SERVE && current.getType() == SwingType.SERVE) {
+          data.add(new Serve(current.getDate(), current.getSpeed(), serveNb));
+          serveNb++;
+        }
+        else if (!isIntervalLessThan(last.getDate(), current.getDate(), 30) && (current.getType() == SwingType.FOREHAND_VOLLEY || current.getType() == SwingType.BACKHAND_VOLLEY)) {
+          data.add(new Swing(current.getDate(), current.getType() == SwingType.FOREHAND_VOLLEY ? SwingType.FOREHAND_SLICE : SwingType.BACKHAND_SLICE, current.getSpeed()));
+          serveNb = 1;
         }
         else {
-          System.out.println(current.isServe() ? "1er service" : current.getSwingType());
-          j = 1;
+          data.add(current.isServe() ? new Serve(current.getDate(), current.getSpeed(), 1) : current);
+          serveNb = 1;
         }
       }
       last = current;
     }
+
+    return data;
   }
 
   /**
@@ -49,7 +57,7 @@ public class Parser {
    * @param interval l'intervalle en secondes
    * @return true si l'intervalle est inférieur ou égal à celui donné, false sinon
    */
-  private static boolean isIntervalLessThan(LocalDateTime d1, LocalDateTime d2, int interval) {
-    return Duration.between(d1, d2).getSeconds() <= interval;
+  public static boolean isIntervalLessThan(LocalDateTime d1, LocalDateTime d2, int interval) {
+    return Math.abs(Duration.between(d1, d2).getSeconds()) <= interval;
   }
 }
