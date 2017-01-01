@@ -30,22 +30,24 @@ public class Main {
     int minSecond = reduceSpeed(data, 2, Integer::min);
     int avgSecond = reduceSpeed(data, 2, Integer::sum) / nbValidSecondServes;
 
-    System.out.println(nbFirstServes);
-    System.out.println(nbSecondServes);
-    System.out.println(nbOtherServes);
-
     System.out.println("Nombre de services : " + nbServes);
     System.out.println();
-    System.out.format("Proportion de 1ers services : %.2f%%\n", (100 * (double) nbValidFirstServes / nbFirstServes));
+    System.out.println("Nombre de premiers services réussis : " + nbValidFirstServes);
+    System.out.format("Proportion : %.2f%%\n", (100 * (double) nbValidFirstServes / nbFirstServes));
     System.out.format("Vitesse max : %d km/h\n", maxFirst);
     System.out.format("Vitesse moy : %d km/h\n", avgFirst);
     System.out.format("Vitesse min : %d km/h\n", minFirst);
     System.out.println();
-    System.out.format("Proportion de 2èmes services : %.2f%%\n", (100 * (double) nbValidSecondServes / (nbFirstServes + nbSecondServes)));
+    System.out.println("Nombre de deuxièmes services réussis : " + nbValidSecondServes);
+    System.out.format("Proportion : %.2f%%\n", (100 * (double) nbValidSecondServes / (nbFirstServes + nbSecondServes)));
     System.out.format("Vitesse max : %d km/h\n", maxSecond);
     System.out.format("Vitesse moy : %d km/h\n", avgSecond);
     System.out.format("Vitesse min : %d km/h\n", minSecond);
     System.out.println();
+    if (nbOtherServes > 0) {
+      System.out.println("Nombre d'autres services : " + nbOtherServes);
+      System.out.println();
+    }
 
     int nb = 0;
     int min = Integer.MAX_VALUE;
