@@ -1,4 +1,4 @@
-package net.darmo_creations;
+package net.darmo_creations.stats;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -17,7 +17,7 @@ public class Parser {
    * 
    * @param sensorData
    */
-  public static List<Swing> detectServes(List<Swing> sensorData, LocalDate date) {
+  public static List<Swing> parse(List<Swing> sensorData, LocalDate date) {
     List<Swing> data = new ArrayList<>();
     Swing last = null;
     int serveNb = 1;
